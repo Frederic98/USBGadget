@@ -183,6 +183,12 @@ class KeyboardScanCode:
         ALT_RIGHT = 0xE6
         GUI_RIGHT = 0xE7
 
+    @classmethod
+    def is_modifier(cls, key: Union[str, int]):
+        if isinstance(key, str):
+            key = KeyboardScanCode[key]
+        return cls.Modifiers.CONTROL_LEFT <= key <= cls.Modifiers.GUI_RIGHT
+
     def __class_getitem__(cls, item: str):
         if len(item) == 1:
             # A-Z
@@ -233,7 +239,7 @@ class KeyboardGadget(HIDGadget):
             key = KeyboardScanCode[key]
         if key is None:
             raise ValueError('Unknown key')
-        if KeyboardScanCode.Modifiers.CONTROL_LEFT <= key <= KeyboardScanCode.Modifiers.GUI_RIGHT:
+        if KeyboardScanCode.is_modifier(key):
             self.modifier_keys.append(key)
         else:
             self.keys.append(key)
@@ -245,7 +251,7 @@ class KeyboardGadget(HIDGadget):
             key = KeyboardScanCode[key]
         if key is None:
             raise ValueError('Unknown key')
-        if KeyboardScanCode.Modifiers.CONTROL_LEFT <= key <= KeyboardScanCode.Modifiers.GUI_RIGHT:
+        if KeyboardScanCode.is_modifier(key):
             if key in self.modifier_keys:
                 self.modifier_keys.remove(key)
         else:
@@ -259,3 +265,11 @@ class KeyboardGadget(HIDGadget):
         self.update()
         self.release(key)
         self.update()
+
+    def is_pressed(self, key: Union[str, int]):
+        if isinstance(key, str):
+            key = KeyboardScanCode[key]
+        if KeyboardScanCode.is_modifier(key):
+            return (key in self.modifier_keys)
+        else:
+            return (key in self.keys)
