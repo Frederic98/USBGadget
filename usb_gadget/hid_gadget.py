@@ -1,13 +1,16 @@
 import re
 import math
+import select
 import struct
-from typing import BinaryIO, Union
+import threading
+from typing import BinaryIO, Union, Callable
 
 
 class HIDGadget:
     def __init__(self, device: str, auto_update=False):
-        self.device: BinaryIO = open(device, 'wb+')
+        self.device: BinaryIO = open(device, 'wb+', buffering=0)
         self.auto_update = auto_update
+        self.output_report_thread = None
 
     def reset(self):
         pass
@@ -37,6 +40,21 @@ class HIDGadget:
                 # If the out range is reversed - out_min > out_max
                 value = max(out_max, min(value, out_min))
         return value
+
+    def set_output_report_callback(self, func: Callable):
+        if self.output_report_thread is not None:
+            raise RuntimeError('Callback already set')
+        self.output_report_thread = threading.Thread(target=self._output_report_worker, daemon=True, args=[func])
+        self.output_report_thread.start()
+
+    def _output_report_worker(self, callback: Callable):
+        while True:
+            r,w,x = select.select([self.device], [], [])
+            if self.device.closed:
+                break
+            if r:
+                report = self.device.read(1024)         # USB High-Speed max report size = 1024
+                callback(report)
 
 
 class JoystickGadget(HIDGadget):
