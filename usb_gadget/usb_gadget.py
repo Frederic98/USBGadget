@@ -7,11 +7,19 @@ logger = logging.getLogger('usb_gadget')
 
 class ConfigFS:
     path = None
+    _file_dtypes = {}
 
     def __init__(self, path):
         if isinstance(path, ConfigFS):
             path = path.path
         self.path = path
+
+    def __init_subclass__(cls, **kwargs):
+        dtypes = {}
+        for base in reversed(cls.__mro__):
+            if hasattr(base, '_file_dtypes'):
+                dtypes.update(base._file_dtypes)
+        cls._file_dtypes = dtypes
 
     def mkdir(self, name):
         path = os.path.join(self.path, name)
@@ -32,12 +40,30 @@ class ConfigFS:
     def __getattr__(self, file, mode='rt'):
         """Read from file"""
         with open(os.path.join(self.path, file), mode) as f:
-            return f.read().strip()
+            data = f.read().strip()
+        if file in self._file_dtypes:
+            dtype = self._file_dtypes['file']
+            if dtype in (int, hex):
+                data = int(data, 0)
+            elif dtype is bool:
+                data = bool(int(data))
+        return data
 
     def __setattr__(self, file, value, mode=None):
         """Write to file"""
         if self.path is None:
+            # object not yet initialized - set normal attributes
             return object.__setattr__(self, file, value)
+
+        if file in self._file_dtypes:
+            dtype = self._file_dtypes[file]
+            if dtype is bool:
+                value = '1' if value else '0'
+            elif dtype is hex:
+                value = f'0x{value:X}'
+            elif dtype is int:
+                value = str(int(value))
+
         logger.debug(f'{os.path.join(self.path, file)} = {repr(value)}')
         if mode is None:
             if isinstance(value, str):
