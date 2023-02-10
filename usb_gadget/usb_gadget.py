@@ -134,3 +134,16 @@ class HIDFunction(USBFunction):
     @property
     def device(self):
         return subprocess.check_output(['udevadm', 'info', '-r', '-q', 'name', f'/sys/dev/char/{self.dev.strip()}']).decode('ascii').strip()
+
+
+class MassStorageFunction(USBFunction):
+    def __init__(self, gadget: USBGadget, name: str):
+        USBFunction.__init__(self, gadget, 'mass_storage.' + name)
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return MassStorageFunction.LUN(self[f'lun.{item}'])
+        return super().__getitem__(item)
+
+    class LUN(ConfigFS):
+        _file_dtypes = {'cdrom': bool, 'nofua': bool, 'removable': bool, 'ro': bool}
