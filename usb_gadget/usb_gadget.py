@@ -122,9 +122,14 @@ class USBGadget(ConfigFS):
         os.rmdir(self.path)
 
 
-class HIDFunction(ConfigFS):
+class USBFunction(ConfigFS):
     def __init__(self, gadget: USBGadget, name: str):
-        ConfigFS.__init__(self, gadget['functions']['hid.' + name])
+        ConfigFS.__init__(self, gadget['functions'][name])
+
+
+class HIDFunction(USBFunction):
+    def __init__(self, gadget: USBGadget, name: str):
+        USBFunction.__init__(self, gadget, 'hid.' + name)
 
     @property
     def device(self):
