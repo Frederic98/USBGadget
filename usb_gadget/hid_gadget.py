@@ -225,7 +225,8 @@ class KeyboardScanCode:
             if item in cls.__SYMBOLS:
                 return cls.__SYMBOLS[item]
         # Function keys
-        if function_key := re.match(f'F(\d+)', item, re.IGNORECASE):
+        function_key = re.match(f'F(\d+)', item, re.IGNORECASE)
+        if function_key:
             number = int(function_key.group(1))
             if 1 <= number <= 12:
                 return 0x3A + number - 1
